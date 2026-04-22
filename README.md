@@ -1,118 +1,75 @@
-# InjectHtmlWebpackPlugin
+# omg-inject-html-webpack-plugin
 
-一个基于html-webpack-plugin插件扩展的可自定义注入资源路径的插件。
+基于 html-webpack-plugin 扩展的可自定义注入资源路径的 webpack 插件。
 
-### 依赖
-- webpack - 4.x
-- html-webpack-plugin - 4.0.0-beta.8
+## 依赖
 
-### 安装
+| 依赖 | 版本要求 |
+|---|---|
+| webpack | >= 5.0.0 |
+| html-webpack-plugin | >= 5.0.0 |
+| Node.js | >= 18.0.0 |
+
+## 安装
 
 ```shell
-npm install inject-html-webpack-plugin2 --save-dev
+npm install omg-inject-html-webpack-plugin html-webpack-plugin --save-dev
 ```
 
-### 基本使用
+## 基本使用
 
-```JavaScript
-{
+```javascript
+const HtmlWebpackPlugin = require('html-webpack-plugin');
+const InjectHtmlWebpackPlugin = require('omg-inject-html-webpack-plugin');
+
+module.exports = {
     plugins: [
-        new HtmlWebpackPlugin( {
-            template: `./src/html/page.hbs`,
+        new HtmlWebpackPlugin({
+            template: './src/html/page.hbs',
             filename: './dist/html/page.html',
             xhtml: true
-        } ),
+        }),
         new InjectHtmlWebpackPlugin()
     ]
-}
+};
 ```
 
-默认情况下，使用InjectHtmlWebpackPlugin插件，会默认将HtmlWebpackPlugin的options.inject设置为false，并交由InjectHtmlWebpackPlugin设置模板变量传入。
+ESM 导入：
 
-### 在webpack配置中配置资源跨域
+```javascript
+import HtmlWebpackPlugin from 'html-webpack-plugin';
+import InjectHtmlWebpackPlugin from 'omg-inject-html-webpack-plugin';
+```
 
-在webpack配置对资源进行跨域配置，最终也可以注入到模板变量的script和link标签中
-```JavaScript
-{
+默认情况下，InjectHtmlWebpackPlugin 会将 HtmlWebpackPlugin 的 `options.inject` 设置为 `false`，并通过模板变量注入资源。
+
+## 跨域配置
+
+在 webpack output 中配置 `crossOriginLoading`，插件会自动将 `crossorigin` 属性注入到生成的 `<script>` 和 `<link>` 标签中：
+
+```javascript
+module.exports = {
     output: {
         crossOriginLoading: 'anonymous'
     }
-}
+};
 ```
 
-### options
-- inject - 默认为false，如果设置为true，那么将不会生成新的模板变量，使用HtmlWebpackPlugin自己的模板变量
+## Options
 
-### 模板支持
-- ejs（默认支持）
-- handlebars
+| 参数 | 类型 | 默认值 | 说明 |
+|---|---|---|---|
+| `inject` | boolean | `false` | 设为 `true` 则使用 HtmlWebpackPlugin 默认注入行为 |
+| `htmlDir` | string | `''` | HTML 模板目录路径 |
+| `templateParameters` | object | `{}` | 额外的模板参数，会合并到模板变量中 |
 
-### 例子
+## 模板支持
 
-```JavaScript
-{
-    entry： {
-        app: './example/inline/src/app.js',
-        app2: './example/inline/src/app2.js',
-    },
+- **EJS**（默认支持）
+- **Handlebars**
 
-    ...忽略若干配置
+### EJS 模板示例
 
-    plugins: [
-        new HtmlWebpackPlugin( {
-            template: `./src/html/page.hbs`,
-            filename: './dist/html/page.html',
-            xhtml: true,
-            chunks: ['app'],
-        } ),
-        new HtmlWebpackPlugin( {
-            template: `./src/html/page2.hbs`,
-            filename: './dist/html/page2.html',
-            xhtml: true,
-            chunks: ['app2'],
-        } ),
-        new InjectHtmlWebpackPlugin()
-    ]
-}
-```
-
-那么实际上会生成一个这样的对象注入模板，
-
-```JavaScript
-app模板属性
-{ 
-    js: [ 
-        '<script src="https://imgcdn50.zuzuche.com/static/js/react-runtime-f6f38831f74b9a7f3775.js" crossorigin="anonymous"></script>',
-        '<script src="https://imgcdn50.zuzuche.com/static/js/vender~app~app2-b0e019ca74a52cfa7c7f.js" crossorigin="anonymous"></script>',
-        '<script src="https://imgcdn50.zuzuche.com/static/js/style~app-6ca9de33c0d05e1f278d.js" crossorigin="anonymous"></script>',
-        '<script src="https://imgcdn50.zuzuche.com/static/js/app-ab23bfa0dea17ff99171.js" crossorigin="anonymous"></script>' 
-    ],
-    css: [ 
-        '<link href="https://imgcdn50.zuzuche.com/static/css/style~app-752d171e573587446e3b.css" rel="stylesheet" crossorigin="anonymous"/>' 
-    ],
-    manifest: undefined,
-    favicon: undefined 
-}
-
-app2模板属性
-{ 
-    js: [ 
-        '<script src="https://imgcdn50.zuzuche.com/static/js/react-runtime-f6f38831f74b9a7f3775.js" crossorigin="anonymous"></script>',
-        '<script src="https://imgcdn50.zuzuche.com/static/js/vender~app~app2-b0e019ca74a52cfa7c7f.js" crossorigin="anonymous"></script>',
-        '<script src="https://imgcdn50.zuzuche.com/static/js/style~app2-cd35f66a9ad216025fc5.js" crossorigin="anonymous"></script>',
-        '<script src="https://imgcdn50.zuzuche.com/static/js/app2-e3e6d564b273b5f42b43.js" crossorigin="anonymous"></script>'
-    ],
-    css: [ 
-        '<link href="https://imgcdn50.zuzuche.com/static/css/style~app2-f0d566be024b468994ec.css" rel="stylesheet" crossorigin="anonymous"/>'
-    ],
-    manifest: undefined,
-    favicon: undefined 
-}
-```
-
-在模板中使用变量注入资源
-
-ejs
 ```html
 <!DOCTYPE html>
 <html>
@@ -124,19 +81,19 @@ ejs
     <% }); %>
   </head>
   <body>
-  <div id='root'></div>
-  <% assets.js.forEach(function(file){ %>
-    <%= file %>
-  <% }); %>
+    <div id='root'></div>
+    <% assets.js.forEach(function(file){ %>
+      <%= file %>
+    <% }); %>
   </body>
 </html>
 ```
 
-handlebars
+### Handlebars 模板示例
+
 ```html
 <!DOCTYPE html>
 <html>
-
 <head>
   <meta charset="UTF-8">
   <title>Webpack App</title>
@@ -144,64 +101,76 @@ handlebars
     {{{this}}}
   {{/each}}
 </head>
-
 <body>
   <div id='root'></div>
   {{#each assets.js}}
     {{{this}}}
   {{/each}}
 </body>
-
 </html>
 ```
 
-### 将资源inline注入
- - webpack配置entry入口特殊处理
- - 建议只对node_modules中的包进行inline
- - inline会直接读取文件内容进行注入，并不会注入经过webpack编译的代码
+## Inline 模式
 
-```JavaScript
-{
-    entry： {
-        app: './example/inline/src/app.js',
-        eaentry: '@eagleeye-jssdk/loader/zuzuche.js?__inline'
+将资源直接内联注入 HTML，支持对 `node_modules` 中的包进行 inline：
+
+```javascript
+module.exports = {
+    entry: {
+        app: './src/app.js',
+        tracker: 'some-package/tracker.js?__inline'
     },
-
-    ...忽略若干配置
-
     plugins: [
-        new HtmlWebpackPlugin( {
-            template: `./src/html/page.hbs`,
+        new HtmlWebpackPlugin({
+            template: './src/html/page.hbs',
             filename: './dist/html/page.html',
             xhtml: true,
             chunks: ['app'],
-        } ),
+        }),
         new InjectHtmlWebpackPlugin()
     ]
-}
+};
 ```
-模板引入
+
+模板中使用：
 
 ```html
-<!DOCTYPE html>
-<html>
-
 <head>
-  <meta charset="UTF-8">
-  <title>Webpack App</title>
-  {{> './tpl/head.handlebars'}}
-  {{{inline.eaentry}}}
+  {{{inline.tracker}}}
   {{#each assets.css}}
     {{{this}}}
   {{/each}}
 </head>
-
-<body>
-  <div id='root'></div>
-  {{#each assets.js}}
-    {{{this}}}
-  {{/each}}
-</body>
-
-</html>
 ```
+
+> **注意：** inline 模式直接读取文件内容注入，不会经过 webpack 编译。建议仅对 `node_modules` 中的包使用。
+
+## 模板变量
+
+当 `inject: false`（默认）时，模板中可用的变量：
+
+```javascript
+{
+    assets: {
+        js: ['<script src="..." crossorigin="anonymous"></script>', ...],
+        css: ['<link href="..." rel="stylesheet" crossorigin="anonymous"/>', ...],
+        manifest: undefined,
+        favicon: undefined
+    },
+    inline: {
+        tracker: '<script>...inline content...</script>'
+    },
+    // ...custom templateParameters
+}
+```
+
+## 迁移指南 (v1.x → v2.0)
+
+1. 升级 Node.js 至 >= 18.0.0
+2. 升级 webpack 至 >= 5.0.0
+3. 单独安装 `html-webpack-plugin@^5.0.0`（现在是 peerDependency）
+4. 插件 API 无变化，直接替换即可
+
+## License
+
+ISC

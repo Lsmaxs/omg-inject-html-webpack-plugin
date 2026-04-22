@@ -3,20 +3,12 @@ const HtmlWebpackPlugin = require( 'html-webpack-plugin' );
 const MiniCssExtractPlugin = require( 'mini-css-extract-plugin' );
 const InjectHtmlWebpackPlugin = require( './index' );
 const ip = require( 'ip' );
-const fs = require( 'fs' );
 const host = ip.address().toString();
 const port = 9528;
 
 const DIST_PATH = path.resolve( __dirname, './example/react/dist' );
 
 const NODE_ENV = process.env.NODE_ENV;
-let REACT_PATH = 'react/umd/react.production.min.js';
-let REACT_DOM_PATH = 'react-dom/umd/react-dom.production.min.js';
-
-if ( NODE_ENV == 'server' || NODE_ENV == 'development' ) {
-    REACT_PATH = 'react/umd/react.development.js';
-    REACT_DOM_PATH = 'react-dom/umd/react-dom.development.js';
-}
 
 const splitChunksName = [];
 
@@ -37,9 +29,7 @@ const initWebpackConfig = () => {
                 "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, PATCH, OPTIONS",
                 "Access-Control-Allow-Headers": "X-Requested-With, content-type, Authorization"
             },
-            disableHostCheck: true,
             port,
-            // setup: router
         },
         module: {
             rules: [
@@ -58,7 +48,7 @@ const initWebpackConfig = () => {
                                     require( '@babel/preset-env' ).default,
                                     {
                                         "targets": {
-                                            browsers: [ // 浏览器
+                                            browsers: [
                                                 'Chrome >= 45',
                                                 'last 2 Firefox versions',
                                                 'ie >= 10',
@@ -69,12 +59,11 @@ const initWebpackConfig = () => {
                                             ]
                                         },
                                         modules: false,
-                                        debug: false,
                                         useBuiltIns: false,
                                         ignoreBrowserslistConfig: false,
                                     }
                                 ],
-                                require( '@babel/preset-react' ).default
+                                [ require( '@babel/preset-react' ).default, { runtime: 'classic' } ]
                             ],
                             plugins: [
                                 ["@babel/plugin-proposal-class-properties", {
@@ -103,19 +92,20 @@ const initWebpackConfig = () => {
                         {
                             loader: 'postcss-loader',
                             options: {
-                                ident: 'postcss',
-                                plugins: [
-                                    require( 'autoprefixer' )( {
-                                        broswer: [
-                                            'Chrome >= 45',
-                                            'last 2 Firefox versions',
-                                            'ie >= 10',
-                                            'Edge >= 12',
-                                            'iOS >= 9',
-                                            'Android >= 4',
-                                            'last 2 ChromeAndroid versions',
-                                        ]
-                                    } )], //处理CSS前缀问题，自动添加前缀
+                                postcssOptions: {
+                                    plugins: [
+                                        require( 'autoprefixer' )( {
+                                            overrideBrowserslist: [
+                                                'Chrome >= 45',
+                                                'last 2 Firefox versions',
+                                                'ie >= 10',
+                                                'Edge >= 12',
+                                                'iOS >= 9',
+                                                'Android >= 4',
+                                                'last 2 ChromeAndroid versions',
+                                            ]
+                                        } )]
+                                }
                             }
                         },
                         {
@@ -123,11 +113,22 @@ const initWebpackConfig = () => {
                         }]
                 },
                 {
-                    test: /\.(woff|woff2|eot|ttf|jpg|png|gif)\??.*$/,
-                    loader: 'url-loader',
-                    query: {
-                        limit: 8192,
-                        name: 'images/[name].[ext]'
+                    test: /\.(woff|woff2|eot|ttf)$/,
+                    type: 'asset/resource',
+                    generator: {
+                        filename: 'fonts/[name].[ext]'
+                    }
+                },
+                {
+                    test: /\.(jpg|png|gif)$/,
+                    type: 'asset',
+                    parser: {
+                        dataUrlCondition: {
+                            maxSize: 8192
+                        }
+                    },
+                    generator: {
+                        filename: 'images/[name].[ext]'
                     }
                 },
                 {
@@ -138,8 +139,6 @@ const initWebpackConfig = () => {
         },
         resolve: {
             alias: {
-                react: require.resolve( REACT_PATH ),
-                'react-dom': require.resolve( REACT_DOM_PATH ),
                 '@': path.resolve( __dirname, './example/react/src/book/' ),
                 '^': path.resolve( __dirname, './example/react/src/otherService/' ),
                 '@@': path.resolve( __dirname, './example/react/src/' )
@@ -147,7 +146,6 @@ const initWebpackConfig = () => {
             extensions: ['.js', '.jsx', '.json'],
         },
         optimization: {
-            //抽取公共的dm
             splitChunks: {
                 chunks: 'initial',
                 minSize: 30000,
@@ -156,13 +154,11 @@ const initWebpackConfig = () => {
                 maxAsyncRequests: 5,
                 maxInitialRequests: 3,
                 automaticNameDelimiter: '~',
-                automaticNameMaxLength: 30,
-                name: true,
                 cacheGroups: {
                     styles: {
                         name: ( module, chunks, cacheGroupKey ) => {
                             const arr = [];
-                            module._chunks.forEach( ( chunk ) => { arr.push( chunk.name ) } )
+                            chunks.forEach( ( chunk ) => { arr.push( chunk.name ) } )
                             let splitChunkName = 'style~' + arr.join( '~' );
                             if ( splitChunksName.indexOf( splitChunkName ) == -1 ) {
                                 splitChunksName.push( splitChunkName );
@@ -190,7 +186,7 @@ const initWebpackConfig = () => {
                         test: /[\\/]node_modules[\\/]/,
                         name: ( module, chunks, cacheGroupKey ) => {
                             const arr = [];
-                            module._chunks.forEach( ( chunk ) => { arr.push( chunk.name ) } )
+                            chunks.forEach( ( chunk ) => { arr.push( chunk.name ) } )
                             let splitChunkName = 'vender~' + arr.join( '~' );
                             if ( splitChunksName.indexOf( splitChunkName ) == -1 ) {
                                 splitChunksName.push( splitChunkName );

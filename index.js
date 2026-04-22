@@ -9,11 +9,16 @@ const PLUGIN_NAME = 'omg-inject-html-webpack-plugin';
 const cacheContent = {};
 
 class OmgInjectHtmlWebpackPlugin {
-    constructor( options ) {
+    constructor ( options ) {
         const defaultOptions = {
-            inject: false, // 默认将会关闭html-webpack-plugin的inject
+            inject: false,
+            htmlDir: '',
+            templateParameters: {},
         };
         this.options = Object.assign( defaultOptions, options );
+        if ( this.options.inject !== undefined && typeof this.options.inject !== 'boolean' ) {
+            throw new Error( `[${PLUGIN_NAME}] options.inject must be a boolean` );
+        }
         this.cwd = process.cwd();
         this.inlineFileContent = {};
     }
@@ -29,21 +34,25 @@ class OmgInjectHtmlWebpackPlugin {
         }
     }
 
-    createInlineStaticObject ( compilation, cb ) {
+    async createInlineStaticObject ( compilation ) {
         const entrys = compilation.options.entry;
         const regex = /\?__inline/;
+        const { promises: fsp } = fs;
+
         if ( isObject( entrys ) ) {
             const entryKeys = Object.keys( entrys );
-            entryKeys.forEach( entry => {
-
+            for ( const entry of entryKeys ) {
                 let target = entrys[entry];
-                // build情况下target是字符串，server下是数组
-                target = isArray(target) ? target[target.length - 1] : target;
+                // webpack 5: entry 可能是 { import: [...] } 描述符对象
+                if ( isObject( target ) && target.import ) {
+                    target = isArray( target.import ) ? target.import[target.import.length - 1] : target.import;
+                }
+                target = isArray( target ) ? target[target.length - 1] : target;
 
-                if ( regex.test( target ) ) {
-                    const [file, ext] = target.split( '?' );
+                if ( isString( target ) && regex.test( target ) ) {
+                    const [file] = target.split( '?' );
                     let filePath = '';
-                    if ( file[0] != '/' || file[0] != '.' ) {
+                    if ( file[0] != '/' && file[0] != '.' ) {
                         filePath = path.join( this.cwd, './node_modules', file );
                     } else {
                         filePath = path.join( this.cwd, file );
@@ -52,17 +61,17 @@ class OmgInjectHtmlWebpackPlugin {
                     if ( cacheContent[filePath] ) {
                         this.inlineFileContent[entry] = `<script>${cacheContent[filePath]}</script>`;
                     } else {
-                        const exists = fs.existsSync( filePath );
-                        if ( exists ) {
-                            const content = fs.readFileSync( filePath, 'utf8' );
+                        try {
+                            const content = await fsp.readFile( filePath, 'utf8' );
                             this.inlineFileContent[entry] = `<script>${content}</script>`;
                             cacheContent[filePath] = content;
+                        } catch ( e ) {
+                            // 文件不存在，静默跳过
                         }
                     }
                 }
-            } )
+            }
         }
-        return cb();
     }
 
     templateParametersGenerator ( compilation, assets, assetTags, options ) {
@@ -71,7 +80,6 @@ class OmgInjectHtmlWebpackPlugin {
 
         // 如果开启默认inject，那么将不会进行任何操作
         if ( options.inject ) {
-            // 官方这样返回，但是先简略处理
             return {
                 compilation: compilation,
                 webpackConfig: compilation.options,
@@ -85,9 +93,8 @@ class OmgInjectHtmlWebpackPlugin {
 
         const xhtml = options.xhtml;
         const inject = options.inject;
-        const crossOriginLoading = compilation.options.output.crossOriginLoading; // 是否允许资源跨域
+        const crossOriginLoading = compilation.options.output.crossOriginLoading;
 
-        const injectIndexKeys = Object.keys( assetTags );
         const newAssets = {
             js: [],
             css: [],
@@ -95,80 +102,37 @@ class OmgInjectHtmlWebpackPlugin {
             favicon: assets.favicon,
         };
 
-        // 循坏每一个tag进行属性的扩展
-        injectIndexKeys.forEach( ( key ) => {
+        // html-webpack-plugin v5: assetTags 是 { headTags: HtmlTagArray, bodyTags: HtmlTagArray }
+        [ 'headTags', 'bodyTags' ].forEach( ( key ) => {
             const tags = assetTags[key];
-            const newTags = tags.map( ( item ) => {
-
-                // 扩展属性参数
-                item.attributes = !item.attributes ? {} : item.attributes;
-                if ( crossOriginLoading ) {
-                    item.attributes.crossorigin = crossOriginLoading;
-                }
-
-                // 不使用默认注入那么将生成script和link标签进行构建并保存到变量中
-                !inject && _self.createNewAssetsObject( newAssets, item, xhtml );
-
-            } );
-
-            // 重写assets，将assets转为构建后的html字段
-            assetTags[key] = newTags;
+            if ( tags ) {
+                tags.forEach( ( item ) => {
+                    item.attributes = !item.attributes ? {} : item.attributes;
+                    if ( crossOriginLoading ) {
+                        item.attributes.crossorigin = crossOriginLoading;
+                    }
+                    _self.createNewAssetsObject( newAssets, item, xhtml );
+                } );
+            }
         } );
+
         return {
             assets: newAssets,
             inline: { ...this.inlineFileContent },
             ..._self.options.templateParameters
-        }
+        };
     }
 
     apply ( compiler ) {
-
-        // compiler.hooks.beforeRun.tapAsync( PLUGIN_NAME, ( compilation, cb ) => {
-        //     // console.log(compilation);
-        //     // 获取entry，将inline移除，并保持内容
-        //     // 只有入口文件是object形式才可使用
-        //     const entrys = compilation.options.entry;
-        //     const regex = /\?__inline/;
-        //     console.log( entrys )
-        //     if ( isObject( entrys ) ) {
-        //         const entryKeys = Object.keys( entrys );
-        //         entryKeys.forEach( entry => {
-        //             if ( regex.test( entrys[entry] ) ) {
-        //                 const [file, ext] = entrys[entry].split( '?' );
-        //                 let filePath = '';
-        //                 if ( file[0] != '/' || file[0] != '.' ) {
-        //                     filePath = path.join( this.cwd, './node_modules', file );
-        //                 } else {
-        //                     filePath = path.join( this.cwd, file );
-        //                 }
-
-        //                 const exists = fs.existsSync( filePath );
-        //                 if ( exists ) {
-        //                     const content = fs.readFileSync( filePath, 'utf8' );
-        //                     this.inlineFileContent[entry] = `<script>${content}</script>`;
-        //                 }
-        //                 delete entrys[entry];
-
-        //             }
-        //         } )
-        //     }
-        //     cb( null, compilation );
-        // } );
-
         compiler.hooks.compilation.tap( PLUGIN_NAME, ( compilation ) => {
-            const hooks = HtmlWebpackPlugin.getHooks( compilation );
-            // 修改templateParametersGenerator，返回构建好的每个页面所关联的资源注入模板变量
-            hooks.beforeAssetTagGeneration.tapAsync( PLUGIN_NAME, ( data, cb ) => {
-                // 重写templateParameters，在最后输出前替换
-                data.plugin.options.templateParameters = ( compilation, assets, assetTags, options ) => {
-                    return this.createInlineStaticObject( compilation, () => {
-                        return this.templateParametersGenerator( compilation, assets, assetTags, options )
-                    } )
-                }
-
+            const hooks = HtmlWebpackPlugin.getCompilationHooks ? HtmlWebpackPlugin.getCompilationHooks( compilation ) : HtmlWebpackPlugin.getHooks( compilation );
+            hooks.beforeAssetTagGeneration.tapAsync( PLUGIN_NAME, async ( data, cb ) => {
+                data.plugin.options.templateParameters = async ( compilation, assets, assetTags, options ) => {
+                    await this.createInlineStaticObject( compilation );
+                    return this.templateParametersGenerator( compilation, assets, assetTags, options );
+                };
                 cb( null, data );
             } );
-
         } );
     }
 }

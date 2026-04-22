@@ -3,6 +3,7 @@ docs/
 examples/
 node_modules/
 test/
+upgradePlan/
 ~*
 *.log
 .vscode
@@ -16,3 +17,4 @@ test/
 *.yml
 package-lock.json
 example/
+.github/

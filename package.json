@@ -1,25 +1,79 @@
 {
   "name": "omg-inject-html-webpack-plugin",
-  "version": "1.3.3",
-  "description": "",
+  "version": "2.0.0",
+  "description": "A webpack 5 plugin for custom HTML resource injection with inline script support",
   "main": "index.js",
-  "directories": {
-    "example": "example"
+  "exports": {
+    ".": {
+      "require": "./index.js",
+      "import": "./index.mjs"
+    }
   },
   "files": [
-	  "index.js",
+    "index.js",
+    "index.mjs",
     "lib",
     "README.md",
+    "CHANGELOG.md",
     "package.json"
-	],
+  ],
+  "engines": {
+    "node": ">=18.0.0"
+  },
   "scripts": {
-    "server": "node config/server.config.js",
-    "test": "NODE_ENV=development webpack --config webpack.config.js",
+    "test": "jest",
+    "test:unit": "jest test/unit",
+    "test:integration": "jest test/integration",
+    "test:coverage": "jest --coverage",
     "default": "NODE_ENV=development webpack --config ./example/default/webpack.config.js",
     "ejs": "NODE_ENV=development webpack --config ./example/ejs/webpack.config.js",
     "hbs": "NODE_ENV=development webpack --config ./example/hbs/webpack.config.js",
     "inline": "NODE_ENV=production webpack --config ./example/inline/webpack.config.js",
     "inline-s": "NODE_ENV=development webpack-dev-server --config ./example/inline/webpack.config.js"
+  },
+  "peerDependencies": {
+    "html-webpack-plugin": ">=5.0.0"
+  },
+  "peerDependenciesMeta": {
+    "html-webpack-plugin": {
+      "optional": false
+    }
+  },
+  "devDependencies": {
+    "@babel/core": "^7.29.0",
+    "@babel/plugin-proposal-class-properties": "^7.18.6",
+    "@babel/plugin-transform-runtime": "^7.29.0",
+    "@babel/preset-env": "^7.29.2",
+    "@babel/preset-react": "^7.28.5",
+    "@babel/runtime-corejs3": "^7.29.2",
+    "@eagleeye-jssdk/loader": "^1.6.0",
+    "autoprefixer": "^10.5.0",
+    "babel-loader": "^10.1.1",
+    "css-loader": "^7.1.4",
+    "expose-loader": "^5.0.1",
+    "handlebars": "^4.7.9",
+    "handlebars-loader": "^1.7.3",
+    "html-loader": "^5.1.0",
+    "html-webpack-plugin": "^5.6.7",
+    "ip": "^2.0.1",
+    "jest": "^30.3.0",
+    "memfs": "^4.57.2",
+    "mini-css-extract-plugin": "^2.10.2",
+    "moment": "^2.30.1",
+    "nunjucks": "^3.2.4",
+    "nunjucks-html-loader": "1.1.0",
+    "nunjucks-webpack-plugin": "5.0.0",
+    "postcss-loader": "^8.2.1",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "sass": "^1.99.0",
+    "sass-loader": "^16.0.7",
+    "style-loader": "^4.0.0",
+    "svg-sprite-loader": "^6.0.11",
+    "webpack": "^5.106.2",
+    "webpack-bundle-analyzer": "^4.10.2",
+    "webpack-cli": "^5.1.4",
+    "webpack-dev-server": "^5.2.3"
   },
   "repository": {
     "type": "git",
@@ -30,48 +84,5 @@
   "bugs": {
     "url": "https://github.com/Ncnbb/omg-inject-html-webpack-plugin/issues"
   },
-  "homepage": "https://github.com/Ncnbb/omg-inject-html-webpack-plugin#readme",
-  "dependencies": {
-    "html-webpack-plugin": "4.0.0-beta.8"
-  },
-  "devDependencies": {
-    "@babel/core": "7.5.5",
-    "@babel/plugin-proposal-class-properties": "7.5.5",
-    "@babel/plugin-transform-runtime": "7.5.5",
-    "@babel/preset-env": "7.5.5",
-    "@babel/preset-react": "7.0.0",
-    "@babel/runtime-corejs3": "7.5.5",
-    "@eagleeye-jssdk/loader": "1.6.0",
-    "autoprefixer": "9.6.1",
-    "babel-loader": "8.0.6",
-    "css-loader": "3.2.0",
-    "expose-loader": "0.7.5",
-    "extract-text-webpack-plugin": "4.0.0-beta.0",
-    "file-loader": "4.2.0",
-    "handlebars": "4.2.0",
-    "handlebars-loader": "1.7.1",
-    "html-loader": "0.5.5",
-    "mini-css-extract-plugin": "0.8.0",
-    "moment": "2.24.0",
-    "node-sass": "4.12.0",
-    "nunjucks": "3.2.0",
-    "nunjucks-html-loader": "1.1.0",
-    "nunjucks-webpack-plugin": "5.0.0",
-    "open-browser-webpack-plugin": "0.0.5",
-    "postcss-loader": "3.0.0",
-    "react": "16.2.0",
-    "react-dom": "16.2.0",
-    "react-lazyload": "2.2.7",
-    "react-router": "4.1.1",
-    "sass-loader": "8.0.0",
-    "style-loader": "1.0.0",
-    "svg-sprite-loader": "4.1.6",
-    "uglify-js": "3.3.23",
-    "underscore": "1.8.3",
-    "url-loader": "2.1.0",
-    "webpack": "4.39.3",
-    "webpack-bundle-analyzer": "2.13.1",
-    "webpack-cli": "3.3.7",
-    "webpack-dev-server": "3.8.0"
-  }
+  "homepage": "https://github.com/Ncnbb/omg-inject-html-webpack-plugin#readme"
 }
